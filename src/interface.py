@@ -8,36 +8,61 @@ def criar_sidebar():
     st.sidebar.title("Configurações")
     num_servidores = st.sidebar.slider("Número de Servidores", 1, 10, 3)
     nivel_confianca = st.sidebar.slider("Nível de Confiança", 0.8, 0.99, 0.95)
-    return num_servidores, nivel_confianca
+    
+    # Adicionar opção para selecionar arquivo de exemplo
+    arquivo_exemplo = st.sidebar.selectbox(
+        "Selecionar arquivo de exemplo",
+        ["Nenhum", "input.csv", "input2.csv"]
+    )
+    
+    return num_servidores, nivel_confianca, arquivo_exemplo
 
 def main():
     st.title("Sistema de Simulação de Filas - Clínica Médica")
     
     # Configurações na barra lateral
-    num_servidores, nivel_confianca = criar_sidebar()
+    num_servidores, nivel_confianca, arquivo_exemplo = criar_sidebar()
     
     # Upload de arquivo
     uploaded_file = st.file_uploader("Carregar arquivo CSV com dados", type=['csv'])
     
+    dados_df = None
+    
+    # Verificar se um arquivo de exemplo foi selecionado
+    if arquivo_exemplo != "Nenhum":
+        caminho_arquivo = f"C:\\Users\\lobat_1o2ktb6\\OneDrive\\Área de Trabalho\\Queue_ClinGo\\data\\{arquivo_exemplo}"
+        dados_df = pd.read_csv(caminho_arquivo)
+        st.success(f"Arquivo de exemplo '{arquivo_exemplo}' carregado com sucesso!")
+    
+    # Se um arquivo foi carregado pelo uploader, ele tem prioridade
     if uploaded_file is not None:
         try:
-            uploaded_file = r"C:\Users\lobat_1o2ktb6\OneDrive\Área de Trabalho\Queue_ClinGo\data\input.csv"
+            print("\n[LOG] Arquivo carregado pelo usuário:")
+            print(f"[LOG] Nome do arquivo: {uploaded_file.name}")
+            
             dados_df = pd.read_csv(uploaded_file) # Ler o CSV para DataFrame aqui
-
+            print("[LOG] Dados carregados do CSV:")
+            print(dados_df.head())
+            print(f"[LOG] Dimensões do DataFrame: {dados_df.shape}")
             
             # Verificar se o DataFrame não está vazio e tem as colunas esperadas
             if dados_df.empty:
                 st.error("O arquivo CSV está vazio.")
+                print("[LOG] ERRO: O arquivo CSV está vazio.")
                 return
             if not {'tempo_chegada', 'tempo_atendimento'}.issubset(dados_df.columns):
                 st.error("O arquivo CSV deve conter as colunas 'tempo_chegada' e 'tempo_atendimento'.")
+                print("[LOG] ERRO: Colunas necessárias não encontradas.")
+                print(f"[LOG] Colunas encontradas: {dados_df.columns.tolist()}")
                 return
 
         except pd.errors.EmptyDataError:
             st.error("Erro ao ler o arquivo CSV: Nenhuma coluna para analisar. Verifique o formato do arquivo.")
+            print("[LOG] ERRO: Arquivo CSV vazio ou mal formatado.")
             return
         except Exception as e:
             st.error(f"Erro ao processar o arquivo CSV: {e}")
+            print(f"[LOG] ERRO ao processar o arquivo CSV: {e}")
             return
 
         # Tabs para organizar o conteúdo
@@ -63,8 +88,12 @@ def main():
         
         with tab2:
             st.header("Análise Estatística")
+            print("\n[LOG] Iniciando análise estatística")
             analisador = AnalisadorEstatistico(dados_df) # Passar o DataFrame
             estatisticas = analisador.calcular_estatisticas_descritivas()
+            
+            print("\n[LOG] Estatísticas calculadas:")
+            print(estatisticas)
             
             st.subheader("Estatísticas Descritivas")
             st.dataframe(pd.DataFrame(estatisticas))
