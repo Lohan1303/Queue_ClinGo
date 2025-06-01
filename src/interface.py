@@ -39,35 +39,31 @@ def main():
         try:
             print("\n[LOG] Arquivo carregado pelo usuário:")
             print(f"[LOG] Nome do arquivo: {uploaded_file.name}")
-            
-            dados_df = pd.read_csv(uploaded_file) # Ler o CSV para DataFrame aqui
+            dados_df = pd.read_csv(uploaded_file)
             print("[LOG] Dados carregados do CSV:")
             print(dados_df.head())
             print(f"[LOG] Dimensões do DataFrame: {dados_df.shape}")
-            
-            # Verificar se o DataFrame não está vazio e tem as colunas esperadas
             if dados_df.empty:
                 st.error("O arquivo CSV está vazio.")
                 print("[LOG] ERRO: O arquivo CSV está vazio.")
-                return
+                dados_df = None
             if not {'tempo_chegada', 'tempo_atendimento'}.issubset(dados_df.columns):
                 st.error("O arquivo CSV deve conter as colunas 'tempo_chegada' e 'tempo_atendimento'.")
                 print("[LOG] ERRO: Colunas necessárias não encontradas.")
                 print(f"[LOG] Colunas encontradas: {dados_df.columns.tolist()}")
-                return
-
+                dados_df = None
         except pd.errors.EmptyDataError:
             st.error("Erro ao ler o arquivo CSV: Nenhuma coluna para analisar. Verifique o formato do arquivo.")
             print("[LOG] ERRO: Arquivo CSV vazio ou mal formatado.")
-            return
+            dados_df = None
         except Exception as e:
             st.error(f"Erro ao processar o arquivo CSV: {e}")
             print(f"[LOG] ERRO ao processar o arquivo CSV: {e}")
-            return
+            dados_df = None
 
+    if dados_df is not None:
         # Tabs para organizar o conteúdo
         tab1, tab2, tab3 = st.tabs(["Simulação", "Estatísticas", "Visualizações"])
-        
         with tab1:
             st.header("Simulação da Fila")
             if st.button("Executar Simulação"):
@@ -83,8 +79,8 @@ def main():
                     st.metric("Número Médio na Fila", f"{resultados['Lq']:.2f}")
                 with col2:
                     st.metric("Probabilidade de Espera", f"{resultados['P_espera']:.2%}")
-                    st.metric("Tempo Médio no Sistema", f"{resultados['W']:.2f} min")
-                    st.metric("Número Médio no Sistema", f"{resultados['L']:.2f}")
+                    st.metric("Tempo Médio no Sistema", f"{resultados['W']:.3f} min")
+                    st.metric("Número Médio no Sistema", f"{resultados['L']:.3f}")
         
         with tab2:
             st.header("Análise Estatística")
