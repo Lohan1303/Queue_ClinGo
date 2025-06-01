@@ -135,17 +135,17 @@ def main():
             inicio_atendimento = np.zeros_like(tempos_chegada)
             fim_atendimento = np.zeros_like(tempos_chegada)
             tempo_espera = np.zeros_like(tempos_chegada)
-            # servidores_livres = [0] * num_servidores
-            # fila = []
+
+            # Controle do tempo de liberação de cada servidor
+            servidores_fim = np.zeros(num_servidores)
 
             for i in range(len(tempos_chegada)):
-                # O cliente só pode ser atendido quando chega e quando algum servidor está livre
-                if i == 0:
-                    inicio_atendimento[i] = tempos_chegada[i]
-                else:
-                    inicio_atendimento[i] = max(tempos_chegada[i], fim_atendimento[i-1])
+                # Encontra o servidor que ficará livre primeiro
+                idx_servidor = np.argmin(servidores_fim)
+                inicio_atendimento[i] = max(tempos_chegada[i], servidores_fim[idx_servidor])
                 tempo_espera[i] = inicio_atendimento[i] - tempos_chegada[i]
                 fim_atendimento[i] = inicio_atendimento[i] + tempos_atendimento[i]
+                servidores_fim[idx_servidor] = fim_atendimento[i]
 
             fig3, ax3 = plt.subplots(figsize=(8, 4))
             ax3.plot(range(1, len(tempo_espera)+1), tempo_espera, marker='o', linestyle='-', color='purple')
