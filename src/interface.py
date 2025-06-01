@@ -75,13 +75,13 @@ def main():
                 # Exibir resultados
                 col1, col2 = st.columns(2)
                 with col1:
-                    st.metric("Probabilidade Sistema Vazio (P0)", f"{resultados['P0']:.2%}")
-                    st.metric("Tempo Médio de Espera (Wq)", f"{resultados['Wq']:.3f} min")
-                    st.metric("Número Médio na Fila (Lq)", f"{resultados['Lq']:.3f}")
+                    st.metric("Probabilidade Sistema Vazio", f"{resultados['P0']:.2%}")
+                    st.metric("Tempo Médio de Espera", f"{resultados['Wq']:.3f} min")
+                    st.metric("Número Médio na Fila", f"{resultados['Lq']:.3f}")
                 with col2:
-                    st.metric("Probabilidade de Espera (P_espera)", f"{resultados['P_espera']:.2%}")
-                    st.metric("Tempo Médio no Sistema (W)", f"{resultados['W']:.3f} min")
-                    st.metric("Número Médio no Sistema (L)", f"{resultados['L']:.3f}")
+                    st.metric("Probabilidade de Espera", f"{resultados['P_espera']:.2%}")
+                    st.metric("Tempo Médio no Sistema", f"{resultados['W']:.3f} min")
+                    st.metric("Número Médio no Sistema", f"{resultados['L']:.3f}")
         
         with tab2:
             st.header("Análise Estatística")
