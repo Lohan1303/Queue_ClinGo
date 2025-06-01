@@ -3,6 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from simulacao import SimuladorFilas
 from estatistica import AnalisadorEstatistico
+import os
 
 def criar_sidebar():
     st.sidebar.title("Configurações")
@@ -30,7 +31,7 @@ def main():
     
     # Verificar se um arquivo de exemplo foi selecionado
     if arquivo_exemplo != "Nenhum":
-        caminho_arquivo = f"C:\\Users\\lobat_1o2ktb6\\OneDrive\\Área de Trabalho\\Queue_ClinGo\\data\\{arquivo_exemplo}"
+        caminho_arquivo = os.path.join(os.path.dirname(__file__), "..", "data", arquivo_exemplo)
         dados_df = pd.read_csv(caminho_arquivo)
         st.success(f"Arquivo de exemplo '{arquivo_exemplo}' carregado com sucesso!")
     
@@ -39,35 +40,31 @@ def main():
         try:
             print("\n[LOG] Arquivo carregado pelo usuário:")
             print(f"[LOG] Nome do arquivo: {uploaded_file.name}")
-            
-            dados_df = pd.read_csv(uploaded_file) # Ler o CSV para DataFrame aqui
+            dados_df = pd.read_csv(uploaded_file)
             print("[LOG] Dados carregados do CSV:")
             print(dados_df.head())
             print(f"[LOG] Dimensões do DataFrame: {dados_df.shape}")
-            
-            # Verificar se o DataFrame não está vazio e tem as colunas esperadas
             if dados_df.empty:
                 st.error("O arquivo CSV está vazio.")
                 print("[LOG] ERRO: O arquivo CSV está vazio.")
-                return
+                dados_df = None
             if not {'tempo_chegada', 'tempo_atendimento'}.issubset(dados_df.columns):
                 st.error("O arquivo CSV deve conter as colunas 'tempo_chegada' e 'tempo_atendimento'.")
                 print("[LOG] ERRO: Colunas necessárias não encontradas.")
                 print(f"[LOG] Colunas encontradas: {dados_df.columns.tolist()}")
-                return
-
+                dados_df = None
         except pd.errors.EmptyDataError:
             st.error("Erro ao ler o arquivo CSV: Nenhuma coluna para analisar. Verifique o formato do arquivo.")
             print("[LOG] ERRO: Arquivo CSV vazio ou mal formatado.")
-            return
+            dados_df = None
         except Exception as e:
             st.error(f"Erro ao processar o arquivo CSV: {e}")
             print(f"[LOG] ERRO ao processar o arquivo CSV: {e}")
-            return
+            dados_df = None
 
+    if dados_df is not None:
         # Tabs para organizar o conteúdo
         tab1, tab2, tab3 = st.tabs(["Simulação", "Estatísticas", "Visualizações"])
-        
         with tab1:
             st.header("Simulação da Fila")
             if st.button("Executar Simulação"):
@@ -79,12 +76,12 @@ def main():
                 col1, col2 = st.columns(2)
                 with col1:
                     st.metric("Probabilidade Sistema Vazio", f"{resultados['P0']:.2%}")
-                    st.metric("Tempo Médio de Espera", f"{resultados['Wq']:.2f} min")
-                    st.metric("Número Médio na Fila", f"{resultados['Lq']:.2f}")
+                    st.metric("Tempo Médio de Espera", f"{resultados['Wq']:.3f} min")
+                    st.metric("Número Médio na Fila", f"{resultados['Lq']:.3f}")
                 with col2:
                     st.metric("Probabilidade de Espera", f"{resultados['P_espera']:.2%}")
-                    st.metric("Tempo Médio no Sistema", f"{resultados['W']:.2f} min")
-                    st.metric("Número Médio no Sistema", f"{resultados['L']:.2f}")
+                    st.metric("Tempo Médio no Sistema", f"{resultados['W']:.3f} min")
+                    st.metric("Número Médio no Sistema", f"{resultados['L']:.3f}")
         
         with tab2:
             st.header("Análise Estatística")
@@ -127,6 +124,79 @@ def main():
             ax.set_title('Comparação dos Tempos de Chegada e Atendimento')
             ax.set_ylabel('Tempo (min)')
             st.pyplot(fig2)
+
+            # --- NOVOS GRÁFICOS ---
+            # graficos = {'hist_chegada_atendimento': fig}
+
+            # 1. Tempo de espera por cliente
+            import numpy as np
+            tempos_chegada = np.cumsum(dados_df['tempo_chegada'].values)
+            tempos_atendimento = dados_df['tempo_atendimento'].values
+            inicio_atendimento = np.zeros_like(tempos_chegada)
+            fim_atendimento = np.zeros_like(tempos_chegada)
+            tempo_espera = np.zeros_like(tempos_chegada)
+            # servidores_livres = [0] * num_servidores
+            # fila = []
+
+            for i in range(len(tempos_chegada)):
+                # O cliente só pode ser atendido quando chega e quando algum servidor está livre
+                if i == 0:
+                    inicio_atendimento[i] = tempos_chegada[i]
+                else:
+                    inicio_atendimento[i] = max(tempos_chegada[i], fim_atendimento[i-1])
+                tempo_espera[i] = inicio_atendimento[i] - tempos_chegada[i]
+                fim_atendimento[i] = inicio_atendimento[i] + tempos_atendimento[i]
+
+            fig3, ax3 = plt.subplots(figsize=(8, 4))
+            ax3.plot(range(1, len(tempo_espera)+1), tempo_espera, marker='o', linestyle='-', color='purple')
+            ax3.set_title('Tempo de Espera por Cliente')
+            ax3.set_xlabel('Cliente')
+            ax3.set_ylabel('Tempo de Espera (min)')
+            # graficos['tempo_espera_cliente'] = fig3
+            st.pyplot(fig3)
+            eventos = []
+            for i in range(len(tempos_chegada)):
+                eventos.append((tempos_chegada[i], 'chegada'))
+                eventos.append((fim_atendimento[i], 'saida'))
+            eventos.sort()
+
+            fila_tempo = []
+            fila_atual = 0
+            tempo_eventos = []
+            for tempo, tipo in eventos:
+                if tipo == 'chegada':
+                    fila_atual += 1
+                else:
+                    fila_atual -= 1
+                tempo_eventos.append(tempo)
+                fila_tempo.append(max(fila_atual - num_servidores, 0))  # fila = clientes além dos servidores
+                tempo_eventos.append(tempo)
+                fila_tempo.append(max(fila_atual - num_servidores, 0))  # fila = clientes além dos servidores
+
+            fig4, ax4 = plt.subplots(figsize=(8, 4))
+            ax4.step(tempo_eventos, fila_tempo, where='post', color='orange')
+            ax4.set_title('Tamanho da Fila ao Longo do Tempo')
+            ax4.set_xlabel('Tempo (min)')
+            ax4.set_ylabel('Tamanho da Fila')
+            # graficos['fila_ao_longo_tempo'] = fig4
+            st.pyplot(fig4)
+            ocupacao_servidores = np.zeros(num_servidores)
+            servidores_fim = [0] * num_servidores
+
+            for i in range(len(tempos_chegada)):
+                # Atribui o cliente ao primeiro servidor livre
+                idx_servidor = np.argmin(servidores_fim)
+                inicio = max(tempos_chegada[i], servidores_fim[idx_servidor])
+                fim = inicio + tempos_atendimento[i]
+                ocupacao_servidores[idx_servidor] += tempos_atendimento[i]
+                servidores_fim[idx_servidor] = fim
+
+            fig5, ax5 = plt.subplots(figsize=(8, 4))
+            ax5.bar(range(1, num_servidores+1), ocupacao_servidores, color='teal')
+            ax5.set_title('Tempo de Ocupação dos Servidores')
+            ax5.set_xlabel('Servidor')
+            ax5.set_ylabel('Tempo Ocupado (min)')
+            st.pyplot(fig5)
 
 if __name__ == "__main__":
     st.set_page_config(
