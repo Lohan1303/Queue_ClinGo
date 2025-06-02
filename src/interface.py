@@ -82,6 +82,17 @@ def main():
                     st.metric("Probabilidade de Espera", f"{resultados['P_espera']:.2%}")
                     st.metric("Tempo Médio no Sistema", f"{resultados['W']:.3f} min")
                     st.metric("Número Médio no Sistema", f"{resultados['L']:.3f}")
+
+                # Botão para exportar resultados da simulação
+                # Criar um DataFrame a partir do dicionário de resultados
+                resultados_df = pd.DataFrame([resultados])
+                csv_simulacao_data = resultados_df.to_csv(index=False, sep=';', decimal=',')
+                st.download_button(
+                    label="Exportar Resultados da Simulação para CSV",
+                    data=csv_simulacao_data,
+                    file_name="resultados.csv",
+                    mime="text/csv",
+                )
         
         with tab2:
             st.header("Análise Estatística")
@@ -94,6 +105,17 @@ def main():
             
             st.subheader("Estatísticas Descritivas")
             st.dataframe(pd.DataFrame(estatisticas))
+
+            # Botão para exportar estatísticas descritivas
+            estatisticas_df = pd.DataFrame(estatisticas).reset_index()
+            estatisticas_df = estatisticas_df.rename(columns={'index': 'Estatística'})
+            csv_data = estatisticas_df.to_csv(index=False, sep=';', decimal=',')
+            st.download_button(
+                label="Exportar Estatísticas Descritivas para CSV",
+                data=csv_data,
+                file_name="resultado_estatistica.csv",
+                mime="text/csv",
+            )
             
             st.subheader("Intervalos de Confiança")
             # Corrigindo o problema - garantindo que estamos iterando sobre uma lista de strings
